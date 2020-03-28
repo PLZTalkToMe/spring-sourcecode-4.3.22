@@ -103,6 +103,8 @@ class BeanDefinitionValueResolver {
 	public Object resolveValueIfNecessary(Object argName, Object value) {
 		// We must check each value to see whether it requires a runtime reference
 		// to another bean to be resolved.
+		// 这里对RuntimeBeanReference进行解析，RuntimeBeanReference是在
+		// 对BeanDefinition进行解析是生成的数据对象
 		if (value instanceof RuntimeBeanReference) {
 			RuntimeBeanReference ref = (RuntimeBeanReference) value;
 			return resolveReference(argName, ref);
@@ -128,6 +130,7 @@ class BeanDefinitionValueResolver {
 					ObjectUtils.getIdentityHexString(bd);
 			return resolveInnerBean(argName, innerBeanName, bd);
 		}
+		// 这里对ManagedArray进行节解析
 		else if (value instanceof ManagedArray) {
 			// May need to resolve contained runtime references.
 			ManagedArray array = (ManagedArray) value;
@@ -152,18 +155,22 @@ class BeanDefinitionValueResolver {
 			}
 			return resolveManagedArray(argName, (List<?>) value, elementType);
 		}
+		// 这里对ManagedList进行解析
 		else if (value instanceof ManagedList) {
 			// May need to resolve contained runtime references.
 			return resolveManagedList(argName, (List<?>) value);
 		}
+		// 这里对ManagedSet进行解析
 		else if (value instanceof ManagedSet) {
 			// May need to resolve contained runtime references.
 			return resolveManagedSet(argName, (Set<?>) value);
 		}
+		// 这里对ManagedMap进行解析
 		else if (value instanceof ManagedMap) {
 			// May need to resolve contained runtime references.
 			return resolveManagedMap(argName, (Map<?, ?>) value);
 		}
+		// 这里对ManagedProperties进行解析
 		else if (value instanceof ManagedProperties) {
 			Properties original = (Properties) value;
 			Properties copy = new Properties();
@@ -180,6 +187,7 @@ class BeanDefinitionValueResolver {
 			}
 			return copy;
 		}
+		// 这里对TypedStringValue进行解析
 		else if (value instanceof TypedStringValue) {
 			// Convert value to target type here.
 			TypedStringValue typedStringValue = (TypedStringValue) value;
@@ -336,8 +344,11 @@ class BeanDefinitionValueResolver {
 	 */
 	private Object resolveReference(Object argName, RuntimeBeanReference ref) {
 		try {
+			// 从RuntimeBeanReference取得reference的名字，这个RuntimeBeanReference是在
+			// 载入BeanDefinition时根据配置生成的
 			String refName = ref.getBeanName();
 			refName = String.valueOf(doEvaluate(refName));
+			// 如果ref是在双亲IoC容器中，那就到双亲IoC
 			if (ref.isToParent()) {
 				if (this.beanFactory.getParentBeanFactory() == null) {
 					throw new BeanCreationException(
@@ -347,6 +358,8 @@ class BeanDefinitionValueResolver {
 				}
 				return this.beanFactory.getParentBeanFactory().getBean(refName);
 			}
+			// 在当前IoC中去获取Bean，这里会触发一个getBean的过程，如果依赖注入没有发生，
+			// 这里会触发响应的依赖注入的发生
 			else {
 				Object bean = this.beanFactory.getBean(refName);
 				this.beanFactory.registerDependentBean(refName, this.beanName);
@@ -364,6 +377,7 @@ class BeanDefinitionValueResolver {
 	 * For each element in the managed array, resolve reference if necessary.
 	 */
 	private Object resolveManagedArray(Object argName, List<?> ml, Class<?> elementType) {
+		// 下面看一下对其他类型依赖注入的例子，比如array和list
 		Object resolved = Array.newInstance(elementType, ml.size());
 		for (int i = 0; i < ml.size(); i++) {
 			Array.set(resolved, i,
@@ -377,6 +391,7 @@ class BeanDefinitionValueResolver {
 	 */
 	private List<?> resolveManagedList(Object argName, List<?> ml) {
 		List<Object> resolved = new ArrayList<Object>(ml.size());
+		// 通过递归方式，对list元素进行解析
 		for (int i = 0; i < ml.size(); i++) {
 			resolved.add(
 					resolveValueIfNecessary(new KeyedArgName(argName, i), ml.get(i)));
