@@ -29,6 +29,10 @@ import org.springframework.util.Assert;
  * Interceptor to wrap am {@link org.springframework.aop.MethodBeforeAdvice}.
  * Used internally by the AOP framework; application developers should not need
  * to use this class directly.
+ * 对于advice的实现可以参考AfterReturningAdviceInterceptor
+ * 就是在AfterReturningAdviceInterceptor的invoke方法中，先完成了MethodInvocation的proceed的调用，
+ * 也就是目标对象的方法的调用，然后再启动advice通知的afterReturning的回调，
+ * 这些实现原理在代码中可以清楚看到
  *
  * @author Rod Johnson
  * @see AfterReturningAdviceInterceptor
@@ -42,6 +46,8 @@ public class MethodBeforeAdviceInterceptor implements MethodInterceptor, BeforeA
 
 	/**
 	 * Create a new MethodBeforeAdviceInterceptor for the given advice.
+	 * 为指定的Advice创建对应的MethodAdviceInterceptor对象
+	 *
 	 * @param advice the MethodBeforeAdvice to wrap
 	 */
 	public MethodBeforeAdviceInterceptor(MethodBeforeAdvice advice) {
@@ -50,6 +56,10 @@ public class MethodBeforeAdviceInterceptor implements MethodInterceptor, BeforeA
 	}
 
 
+	/**
+	 * 这个invoke方法是拦截器的回调方法，会在代理对象被调用的时候触发
+	 * @param mi
+	 */
 	@Override
 	public Object invoke(MethodInvocation mi) throws Throwable {
 		this.advice.before(mi.getMethod(), mi.getArguments(), mi.getThis());

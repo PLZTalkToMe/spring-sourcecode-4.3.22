@@ -60,232 +60,239 @@ import org.springframework.core.BridgeMethodResolver;
  */
 public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Cloneable {
 
-	protected final Object proxy;
+    protected final Object proxy;
 
-	protected final Object target;
+    protected final Object target;
 
-	protected final Method method;
+    protected final Method method;
 
-	protected Object[] arguments;
+    protected Object[] arguments;
 
-	private final Class<?> targetClass;
+    private final Class<?> targetClass;
 
-	/**
-	 * Lazily initialized map of user-specific attributes for this invocation.
-	 */
-	private Map<String, Object> userAttributes;
+    /**
+     * Lazily initialized map of user-specific attributes for this invocation.
+     */
+    private Map<String, Object> userAttributes;
 
-	/**
-	 * List of MethodInterceptor and InterceptorAndDynamicMethodMatcher
-	 * that need dynamic checks.
-	 */
-	protected final List<?> interceptorsAndDynamicMethodMatchers;
+    /**
+     * List of MethodInterceptor and InterceptorAndDynamicMethodMatcher
+     * that need dynamic checks.
+     */
+    protected final List<?> interceptorsAndDynamicMethodMatchers;
 
-	/**
-	 * Index from 0 of the current interceptor we're invoking.
-	 * -1 until we invoke: then the current interceptor.
-	 */
-	private int currentInterceptorIndex = -1;
-
-
-	/**
-	 * Construct a new ReflectiveMethodInvocation with the given arguments.
-	 * @param proxy the proxy object that the invocation was made on
-	 * @param target the target object to invoke
-	 * @param method the method to invoke
-	 * @param arguments the arguments to invoke the method with
-	 * @param targetClass the target class, for MethodMatcher invocations
-	 * @param interceptorsAndDynamicMethodMatchers interceptors that should be applied,
-	 * along with any InterceptorAndDynamicMethodMatchers that need evaluation at runtime.
-	 * MethodMatchers included in this struct must already have been found to have matched
-	 * as far as was possibly statically. Passing an array might be about 10% faster,
-	 * but would complicate the code. And it would work only for static pointcuts.
-	 */
-	protected ReflectiveMethodInvocation(
-			Object proxy, Object target, Method method, Object[] arguments,
-			Class<?> targetClass, List<Object> interceptorsAndDynamicMethodMatchers) {
-
-		this.proxy = proxy;
-		this.target = target;
-		this.targetClass = targetClass;
-		this.method = BridgeMethodResolver.findBridgedMethod(method);
-		this.arguments = AopProxyUtils.adaptArgumentsIfNecessary(method, arguments);
-		this.interceptorsAndDynamicMethodMatchers = interceptorsAndDynamicMethodMatchers;
-	}
+    /**
+     * Index from 0 of the current interceptor we're invoking.
+     * -1 until we invoke: then the current interceptor.
+     */
+    private int currentInterceptorIndex = -1;
 
 
-	@Override
-	public final Object getProxy() {
-		return this.proxy;
-	}
+    /**
+     * Construct a new ReflectiveMethodInvocation with the given arguments.
+     *
+     * @param proxy                                the proxy object that the invocation was made on
+     * @param target                               the target object to invoke
+     * @param method                               the method to invoke
+     * @param arguments                            the arguments to invoke the method with
+     * @param targetClass                          the target class, for MethodMatcher invocations
+     * @param interceptorsAndDynamicMethodMatchers interceptors that should be applied,
+     *                                             along with any InterceptorAndDynamicMethodMatchers that need evaluation at runtime.
+     *                                             MethodMatchers included in this struct must already have been found to have matched
+     *                                             as far as was possibly statically. Passing an array might be about 10% faster,
+     *                                             but would complicate the code. And it would work only for static pointcuts.
+     */
+    protected ReflectiveMethodInvocation(
+            Object proxy, Object target, Method method, Object[] arguments,
+            Class<?> targetClass, List<Object> interceptorsAndDynamicMethodMatchers) {
 
-	@Override
-	public final Object getThis() {
-		return this.target;
-	}
-
-	@Override
-	public final AccessibleObject getStaticPart() {
-		return this.method;
-	}
-
-	/**
-	 * Return the method invoked on the proxied interface.
-	 * May or may not correspond with a method invoked on an underlying
-	 * implementation of that interface.
-	 */
-	@Override
-	public final Method getMethod() {
-		return this.method;
-	}
-
-	@Override
-	public final Object[] getArguments() {
-		return (this.arguments != null ? this.arguments : new Object[0]);
-	}
-
-	@Override
-	public void setArguments(Object... arguments) {
-		this.arguments = arguments;
-	}
+        this.proxy = proxy;
+        this.target = target;
+        this.targetClass = targetClass;
+        this.method = BridgeMethodResolver.findBridgedMethod(method);
+        this.arguments = AopProxyUtils.adaptArgumentsIfNecessary(method, arguments);
+        this.interceptorsAndDynamicMethodMatchers = interceptorsAndDynamicMethodMatchers;
+    }
 
 
-	@Override
-	public Object proceed() throws Throwable {
-		//	We start with an index of -1 and increment early.
-		if (this.currentInterceptorIndex == this.interceptorsAndDynamicMethodMatchers.size() - 1) {
-			return invokeJoinpoint();
-		}
+    @Override
+    public final Object getProxy() {
+        return this.proxy;
+    }
 
-		Object interceptorOrInterceptionAdvice =
-				this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);
-		if (interceptorOrInterceptionAdvice instanceof InterceptorAndDynamicMethodMatcher) {
-			// Evaluate dynamic method matcher here: static part will already have
-			// been evaluated and found to match.
-			InterceptorAndDynamicMethodMatcher dm =
-					(InterceptorAndDynamicMethodMatcher) interceptorOrInterceptionAdvice;
-			if (dm.methodMatcher.matches(this.method, this.targetClass, this.arguments)) {
-				return dm.interceptor.invoke(this);
-			}
-			else {
-				// Dynamic matching failed.
-				// Skip this interceptor and invoke the next in the chain.
-				return proceed();
-			}
-		}
-		else {
-			// It's an interceptor, so we just invoke it: The pointcut will have
-			// been evaluated statically before this object was constructed.
-			return ((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this);
-		}
-	}
+    @Override
+    public final Object getThis() {
+        return this.target;
+    }
 
-	/**
-	 * Invoke the joinpoint using reflection.
-	 * Subclasses can override this to use custom invocation.
-	 * @return the return value of the joinpoint
-	 * @throws Throwable if invoking the joinpoint resulted in an exception
-	 */
-	protected Object invokeJoinpoint() throws Throwable {
-		return AopUtils.invokeJoinpointUsingReflection(this.target, this.method, this.arguments);
-	}
+    @Override
+    public final AccessibleObject getStaticPart() {
+        return this.method;
+    }
+
+    /**
+     * Return the method invoked on the proxied interface.
+     * May or may not correspond with a method invoked on an underlying
+     * implementation of that interface.
+     */
+    @Override
+    public final Method getMethod() {
+        return this.method;
+    }
+
+    @Override
+    public final Object[] getArguments() {
+        return (this.arguments != null ? this.arguments : new Object[0]);
+    }
+
+    @Override
+    public void setArguments(Object... arguments) {
+        this.arguments = arguments;
+    }
 
 
-	/**
-	 * This implementation returns a shallow copy of this invocation object,
-	 * including an independent copy of the original arguments array.
-	 * <p>We want a shallow copy in this case: We want to use the same interceptor
-	 * chain and other object references, but we want an independent value for the
-	 * current interceptor index.
-	 * @see java.lang.Object#clone()
-	 */
-	@Override
-	public MethodInvocation invocableClone() {
-		Object[] cloneArguments = null;
-		if (this.arguments != null) {
-			// Build an independent copy of the arguments array.
-			cloneArguments = new Object[this.arguments.length];
-			System.arraycopy(this.arguments, 0, cloneArguments, 0, this.arguments.length);
-		}
-		return invocableClone(cloneArguments);
-	}
+    @Override
+    public Object proceed() throws Throwable {
+        //	We start with an index of -1 and increment early.
+        // 从索引为-1的拦截器开始调用，并按序递增，如果拦截器链中的拦截器调用完毕，这里开始调用target的函数，
+        // 这个函数是通过反射机制完成的，具体实现在AopUtils.invokeJoinpointUsingReflection方法中
+        if (this.currentInterceptorIndex == this.interceptorsAndDynamicMethodMatchers.size() - 1) {
+            return invokeJoinpoint();
+        }
 
-	/**
-	 * This implementation returns a shallow copy of this invocation object,
-	 * using the given arguments array for the clone.
-	 * <p>We want a shallow copy in this case: We want to use the same interceptor
-	 * chain and other object references, but we want an independent value for the
-	 * current interceptor index.
-	 * @see java.lang.Object#clone()
-	 */
-	@Override
-	public MethodInvocation invocableClone(Object... arguments) {
-		// Force initialization of the user attributes Map,
-		// for having a shared Map reference in the clone.
-		if (this.userAttributes == null) {
-			this.userAttributes = new HashMap<String, Object>();
-		}
+        // 这里沿着定义好的 interceptorOrInterceptionAdvice 链进行处理
+        Object interceptorOrInterceptionAdvice =
+                this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);
+        if (interceptorOrInterceptionAdvice instanceof InterceptorAndDynamicMethodMatcher) {
+            // Evaluate dynamic method matcher here: static part will already have
+            // been evaluated and found to match.
+            // 这里对拦截器进行动态匹配判断，还记得前面分析的Pointcut吗？这里是触发进行匹配的地方
+            // 如果和定义的pointcut匹配，那么这个advice将得到执行
+            InterceptorAndDynamicMethodMatcher dm =
+                    (InterceptorAndDynamicMethodMatcher) interceptorOrInterceptionAdvice;
+            if (dm.methodMatcher.matches(this.method, this.targetClass, this.arguments)) {
+                return dm.interceptor.invoke(this);
+            } else {
+                // Dynamic matching failed.
+                // Skip this interceptor and invoke the next in the chain.
+                // 如果不匹配，那么proceed会被递归调用，直到所有的拦截器都被运行过为止
+                return proceed();
+            }
+        } else {
+            // It's an interceptor, so we just invoke it: The pointcut will have
+            // been evaluated statically before this object was constructed.
+            // 如果是一个interceptor，直接调用这个interceptor对应的方法
+            return ((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this);
+        }
+    }
 
-		// Create the MethodInvocation clone.
-		try {
-			ReflectiveMethodInvocation clone = (ReflectiveMethodInvocation) clone();
-			clone.arguments = arguments;
-			return clone;
-		}
-		catch (CloneNotSupportedException ex) {
-			throw new IllegalStateException(
-					"Should be able to clone object of type [" + getClass() + "]: " + ex);
-		}
-	}
-
-
-	@Override
-	public void setUserAttribute(String key, Object value) {
-		if (value != null) {
-			if (this.userAttributes == null) {
-				this.userAttributes = new HashMap<String, Object>();
-			}
-			this.userAttributes.put(key, value);
-		}
-		else {
-			if (this.userAttributes != null) {
-				this.userAttributes.remove(key);
-			}
-		}
-	}
-
-	@Override
-	public Object getUserAttribute(String key) {
-		return (this.userAttributes != null ? this.userAttributes.get(key) : null);
-	}
-
-	/**
-	 * Return user attributes associated with this invocation.
-	 * This method provides an invocation-bound alternative to a ThreadLocal.
-	 * <p>This map is initialized lazily and is not used in the AOP framework itself.
-	 * @return any user attributes associated with this invocation
-	 * (never {@code null})
-	 */
-	public Map<String, Object> getUserAttributes() {
-		if (this.userAttributes == null) {
-			this.userAttributes = new HashMap<String, Object>();
-		}
-		return this.userAttributes;
-	}
+    /**
+     * Invoke the joinpoint using reflection.
+     * Subclasses can override this to use custom invocation.
+     *
+     * @return the return value of the joinpoint
+     * @throws Throwable if invoking the joinpoint resulted in an exception
+     */
+    protected Object invokeJoinpoint() throws Throwable {
+        return AopUtils.invokeJoinpointUsingReflection(this.target, this.method, this.arguments);
+    }
 
 
-	@Override
-	public String toString() {
-		// Don't do toString on target, it may be proxied.
-		StringBuilder sb = new StringBuilder("ReflectiveMethodInvocation: ");
-		sb.append(this.method).append("; ");
-		if (this.target == null) {
-			sb.append("target is null");
-		}
-		else {
-			sb.append("target is of class [").append(this.target.getClass().getName()).append(']');
-		}
-		return sb.toString();
-	}
+    /**
+     * This implementation returns a shallow copy of this invocation object,
+     * including an independent copy of the original arguments array.
+     * <p>We want a shallow copy in this case: We want to use the same interceptor
+     * chain and other object references, but we want an independent value for the
+     * current interceptor index.
+     *
+     * @see java.lang.Object#clone()
+     */
+    @Override
+    public MethodInvocation invocableClone() {
+        Object[] cloneArguments = null;
+        if (this.arguments != null) {
+            // Build an independent copy of the arguments array.
+            cloneArguments = new Object[this.arguments.length];
+            System.arraycopy(this.arguments, 0, cloneArguments, 0, this.arguments.length);
+        }
+        return invocableClone(cloneArguments);
+    }
+
+    /**
+     * This implementation returns a shallow copy of this invocation object,
+     * using the given arguments array for the clone.
+     * <p>We want a shallow copy in this case: We want to use the same interceptor
+     * chain and other object references, but we want an independent value for the
+     * current interceptor index.
+     *
+     * @see java.lang.Object#clone()
+     */
+    @Override
+    public MethodInvocation invocableClone(Object... arguments) {
+        // Force initialization of the user attributes Map,
+        // for having a shared Map reference in the clone.
+        if (this.userAttributes == null) {
+            this.userAttributes = new HashMap<String, Object>();
+        }
+
+        // Create the MethodInvocation clone.
+        try {
+            ReflectiveMethodInvocation clone = (ReflectiveMethodInvocation) clone();
+            clone.arguments = arguments;
+            return clone;
+        } catch (CloneNotSupportedException ex) {
+            throw new IllegalStateException(
+                    "Should be able to clone object of type [" + getClass() + "]: " + ex);
+        }
+    }
+
+
+    @Override
+    public void setUserAttribute(String key, Object value) {
+        if (value != null) {
+            if (this.userAttributes == null) {
+                this.userAttributes = new HashMap<String, Object>();
+            }
+            this.userAttributes.put(key, value);
+        } else {
+            if (this.userAttributes != null) {
+                this.userAttributes.remove(key);
+            }
+        }
+    }
+
+    @Override
+    public Object getUserAttribute(String key) {
+        return (this.userAttributes != null ? this.userAttributes.get(key) : null);
+    }
+
+    /**
+     * Return user attributes associated with this invocation.
+     * This method provides an invocation-bound alternative to a ThreadLocal.
+     * <p>This map is initialized lazily and is not used in the AOP framework itself.
+     *
+     * @return any user attributes associated with this invocation
+     * (never {@code null})
+     */
+    public Map<String, Object> getUserAttributes() {
+        if (this.userAttributes == null) {
+            this.userAttributes = new HashMap<String, Object>();
+        }
+        return this.userAttributes;
+    }
+
+
+    @Override
+    public String toString() {
+        // Don't do toString on target, it may be proxied.
+        StringBuilder sb = new StringBuilder("ReflectiveMethodInvocation: ");
+        sb.append(this.method).append("; ");
+        if (this.target == null) {
+            sb.append("target is null");
+        } else {
+            sb.append("target is of class [").append(this.target.getClass().getName()).append(']');
+        }
+        return sb.toString();
+    }
 
 }

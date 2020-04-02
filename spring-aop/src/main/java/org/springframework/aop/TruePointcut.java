@@ -26,6 +26,12 @@ import java.io.Serializable;
 @SuppressWarnings("serial")
 class TruePointcut implements Pointcut, Serializable {
 
+	/**
+	 * 这里是单例模式的实现特点，设置私有的构造函数，使其不能直接被实例化
+	 * 并设置一个静态的类变量来保证实例是唯一的
+	 * @return
+	 * @Date 2020/4/1 9:43
+	 */
 	public static final TruePointcut INSTANCE = new TruePointcut();
 
 	/**

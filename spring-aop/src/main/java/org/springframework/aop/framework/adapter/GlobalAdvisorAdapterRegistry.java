@@ -28,6 +28,7 @@ public abstract class GlobalAdvisorAdapterRegistry {
 
 	/**
 	 * Keep track of a single instance so we can return it to classes that request it.
+	 * 单例模式实现
 	 */
 	private static AdvisorAdapterRegistry instance = new DefaultAdvisorAdapterRegistry();
 

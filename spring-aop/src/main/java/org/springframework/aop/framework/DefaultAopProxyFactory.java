@@ -46,17 +46,32 @@ import org.springframework.aop.SpringProxy;
 @SuppressWarnings("serial")
 public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
 
+	/**
+	 * 在AopProxy代理对象生成的过程中，首先要从AdvisedSupport对象中取得的配置
+	 * 这个目标对象是实现AOP锁必须的，道理很简单，AOP完成的是切面应用对目标的增强
+	 * 皮之不存毛将焉附，这个目标对象可以看成是“皮”，而AOP切面的增强就是依附于这块
+	 * 皮毛上的毛。如果这里没有配置目标对象，会直接抛出异常，提示AOP应用，需要提供
+	 * 正确的目标对象配置。
+	 * @param config
+	 * @return org.springframework.aop.framework.AopProxy
+	 * @Author PLZTalkToMe
+	 * @Date 2020/4/1 13:10
+	 */
 	@Override
 	public AopProxy createAopProxy(AdvisedSupport config) throws AopConfigException {
 		if (config.isOptimize() || config.isProxyTargetClass() || hasNoUserSuppliedProxyInterfaces(config)) {
+			// 首先从AdvisedSupport对象中取得配置的目标对象
 			Class<?> targetClass = config.getTargetClass();
+			// 如果这里没有配置目标对象，会直接抛出异常
 			if (targetClass == null) {
 				throw new AopConfigException("TargetSource cannot determine target class: " +
 						"Either an interface or a target is required for proxy creation.");
 			}
+			// 如果target是接口类，使用JDK来生成Proxy
 			if (targetClass.isInterface() || Proxy.isProxyClass(targetClass)) {
 				return new JdkDynamicAopProxy(config);
 			}
+			// 如果不是接口类要生成Proxy，那么要使用CGLIB来生成
 			return new ObjenesisCglibAopProxy(config);
 		}
 		else {

@@ -27,6 +27,12 @@ import org.springframework.aop.MethodBeforeAdvice;
 /**
  * Adapter to enable {@link org.springframework.aop.MethodBeforeAdvice}
  * to be used in the Spring AOP framework.
+ * 这个接口并不复杂主要实现了AdvisorAdapter的两个接口
+ * 一个是supportAdvice：这个方法对advice的类型进行判断，如果advice是MethodBeforeAdvice的实例
+ * 那么返回值为true；
+ * 另一个是对getInstance接口方法的实现，这个方法把advice通知从通知器中取出
+ * 然后创建一个MethodAdviceInterceptor对象，通过这个对象，把取得的advice通知包装起来
+ * 然后返回
  *
  * @author Rod Johnson
  * @author Juergen Hoeller

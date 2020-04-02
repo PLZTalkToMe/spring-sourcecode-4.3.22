@@ -157,6 +157,7 @@ class CglibAopProxy implements AopProxy, Serializable {
 			logger.debug("Creating CGLIB proxy: target source is " + this.advised.getTargetSource());
 		}
 
+		// 从容器中取得在Ioc容器中配置的target对象
 		try {
 			Class<?> rootClass = this.advised.getTargetClass();
 			Assert.state(rootClass != null, "Target class must be available for creating a CGLIB proxy");
@@ -171,9 +172,11 @@ class CglibAopProxy implements AopProxy, Serializable {
 			}
 
 			// Validate the class, writing log messages as necessary.
+			// 验证代理对象的接口设置
 			validateClassIfNecessary(proxySuperClass, classLoader);
 
 			// Configure CGLIB Enhancer...
+			// 创建并配置CGLIB的EnHancer，这个Enhancer对象是CGLIB的主要操作类
 			Enhancer enhancer = createEnhancer();
 			if (classLoader != null) {
 				enhancer.setClassLoader(classLoader);
@@ -182,6 +185,9 @@ class CglibAopProxy implements AopProxy, Serializable {
 					enhancer.setUseCache(false);
 				}
 			}
+
+			// 设置Enhancer对象，包括代理接口设置，回调方法。
+			// 来自advised的IOC配置，比如使用，AOP的DynamicAdvisedInterceptor拦截器
 			enhancer.setSuperclass(proxySuperClass);
 			enhancer.setInterfaces(AopProxyUtils.completeProxiedInterfaces(this.advised));
 			enhancer.setNamingPolicy(SpringNamingPolicy.INSTANCE);
@@ -654,10 +660,12 @@ class CglibAopProxy implements AopProxy, Serializable {
 				if (target != null) {
 					targetClass = target.getClass();
 				}
+				// 从Advisor中取得配置好的AOP通知
 				List<Object> chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass);
 				Object retVal;
 				// Check whether we only have one InvokerInterceptor: that is,
 				// no real advice, but just reflective invocation of the target.
+				// 如果没有AOP通知配置，那么直接调用target对象的调用方法
 				if (chain.isEmpty() && Modifier.isPublic(method.getModifiers())) {
 					// We can skip creating a MethodInvocation: just invoke the target directly.
 					// Note that the final invoker must be an InvokerInterceptor, so we know
@@ -668,6 +676,7 @@ class CglibAopProxy implements AopProxy, Serializable {
 				}
 				else {
 					// We need to create a method invocation...
+					// 通过CglibMethodInvocation来启动advice通知
 					retVal = new CglibMethodInvocation(proxy, target, method, args, targetClass, chain, methodProxy).proceed();
 				}
 				retVal = processReturnType(proxy, target, method, retVal);

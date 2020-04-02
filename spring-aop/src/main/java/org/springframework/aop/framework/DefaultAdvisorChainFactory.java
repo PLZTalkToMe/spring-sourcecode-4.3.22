@@ -52,8 +52,10 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 
 		// This is somewhat tricky... We have to process introductions first,
 		// but we need to preserve order in the ultimate list.
+		// advisor链已在config中持有，这里可以直接使用
 		List<Object> interceptorList = new ArrayList<Object>(config.getAdvisors().length);
 		Class<?> actualClass = (targetClass != null ? targetClass : method.getDeclaringClass());
+		// 判断Advisor是否符合配置要求
 		boolean hasIntroductions = hasMatchingIntroductions(config, actualClass);
 		AdvisorAdapterRegistry registry = GlobalAdvisorAdapterRegistry.getInstance();
 
@@ -62,7 +64,10 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 				// Add it conditionally.
 				PointcutAdvisor pointcutAdvisor = (PointcutAdvisor) advisor;
 				if (config.isPreFiltered() || pointcutAdvisor.getPointcut().getClassFilter().matches(actualClass)) {
+					// 拦截器链是通过AdvisorAdapterRegister来加入的，这个AdvisorAdapterRegister
+					// 对advice织入起了很大的作用，在后面的分析中会看到
 					MethodMatcher mm = pointcutAdvisor.getPointcut().getMethodMatcher();
+					// 使用MethodMatchers.matches方法，进行匹配判断
 					if (MethodMatchers.matches(mm, method, actualClass, hasIntroductions)) {
 						MethodInterceptor[] interceptors = registry.getInterceptors(advisor);
 						if (mm.isRuntime()) {

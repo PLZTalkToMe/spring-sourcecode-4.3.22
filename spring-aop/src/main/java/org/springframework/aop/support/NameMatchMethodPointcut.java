@@ -77,6 +77,10 @@ public class NameMatchMethodPointcut extends StaticMethodMatcherPointcut impleme
 	}
 
 
+	/**
+	 * 方法名相同或者方法名匹配
+	 * @Date 2020/4/1 9:35
+	 */
 	@Override
 	public boolean matches(Method method, Class<?> targetClass) {
 		for (String mappedName : this.mappedNames) {
