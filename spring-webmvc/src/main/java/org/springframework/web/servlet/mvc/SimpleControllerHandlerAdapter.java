@@ -38,6 +38,10 @@ import org.springframework.web.servlet.ModelAndView;
  */
 public class SimpleControllerHandlerAdapter implements HandlerAdapter {
 
+	/**
+	 * 判断将要调用的handler是不是Controller
+	 * @Date 2020/4/3 11:47
+	 */
 	@Override
 	public boolean supports(Object handler) {
 		return (handler instanceof Controller);

@@ -10,6 +10,13 @@ public class CustomerMapper implements RowMapper<Customer> {
 
 	private static final String[] COLUMN_NAMES = new String[] {"id", "forename"};
 
+	/**
+	 * 把查询到的记录集合转换为对象的具体方法
+	 * @param rs
+	 * @param rownum
+	 * @return org.springframework.jdbc.Customer
+	 * @Date 2020/4/3 14:02
+	 */
 	@Override
 	public Customer mapRow(ResultSet rs, int rownum) throws SQLException {
 		Customer cust = new Customer();

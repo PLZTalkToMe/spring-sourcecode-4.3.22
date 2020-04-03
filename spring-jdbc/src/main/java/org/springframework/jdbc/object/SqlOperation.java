@@ -53,6 +53,8 @@ public abstract class SqlOperation extends RdbmsOperation {
 	 */
 	@Override
 	protected final void compileInternal() {
+		// 这里是对参数compile的过称，所有的参数都在getDeclaredParameters中生成了
+		// 一个PreparedStatementCreatorFactory
 		this.preparedStatementFactory = new PreparedStatementCreatorFactory(getSql(), getDeclaredParameters());
 		this.preparedStatementFactory.setResultSetType(getResultSetType());
 		this.preparedStatementFactory.setUpdatableResults(isUpdatableResults());
@@ -63,6 +65,10 @@ public abstract class SqlOperation extends RdbmsOperation {
 		this.preparedStatementFactory.setNativeJdbcExtractor(getJdbcTemplate().getNativeJdbcExtractor());
 
 		onCompileInternal();
+		// 在完成了compile之后，对MappingSqlQuery的准备工作基本就完成了。
+		// 在执行查询时，实际上执行的是SqlQuery的executeByNamedParam方法
+		// 这个方法需要完成的工作包括配置SQL语句，配置数据记录到数据对象的转换的RowMapper，
+		// 然后使用JdbcTemplate来完成数据的查询，并启动数据记录到Java数据对象的转换。
 	}
 
 	/**

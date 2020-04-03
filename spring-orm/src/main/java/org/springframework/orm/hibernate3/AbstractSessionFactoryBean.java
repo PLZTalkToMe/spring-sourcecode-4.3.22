@@ -183,11 +183,18 @@ public abstract class AbstractSessionFactoryBean extends HibernateExceptionTrans
 
 	/**
 	 * Build and expose the SessionFactory.
+	 *
+	 * SessionFactory单例的创建是在AbstractSessionFactory中完成的，可以看到SessionFactory的创建
+	 * 是在容器依赖注入完成以后，由IoC容器的回调方法afterPropertiesSet来完成的。这个IoC容器的回调方法的启动
+	 * 是因为LocalSessionFactoryBean实现了InitializingBean接口，而这个InitializingBean接口的
+	 * afterPropertiesSet方法，会被IoC容器回调，这是IoC容器对Bean进行生命周期管理的一部份
+	 *
 	 * @see #buildSessionFactory()
 	 * @see #wrapSessionFactoryIfNecessary
 	 */
 	@Override
 	public void afterPropertiesSet() throws Exception {
+		// buildSessionFactory是通过配置信息得到的SessionFactory的地方
 		SessionFactory rawSf = buildSessionFactory();
 		this.sessionFactory = wrapSessionFactoryIfNecessary(rawSf);
 		afterSessionFactoryCreation();

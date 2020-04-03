@@ -260,6 +260,7 @@ public class SqlUpdate extends SqlOperation {
 	/**
 	 * Method to execute the update given arguments and
 	 * retrieve the generated keys using a KeyHolder.
+	 *
 	 * @param paramMap Map of parameter name to parameter object,
 	 * matching named parameters specified in the SQL statement
 	 * @param generatedKeyHolder KeyHolder that will hold the generated keys
@@ -267,10 +268,12 @@ public class SqlUpdate extends SqlOperation {
 	 */
 	public int updateByNamedParam(Map<String, ?> paramMap, KeyHolder generatedKeyHolder) throws DataAccessException {
 		validateNamedParameters(paramMap);
+		// 设置SQL和配置Sql的参数
 		ParsedSql parsedSql = getParsedSql();
 		MapSqlParameterSource paramSource = new MapSqlParameterSource(paramMap);
 		String sqlToUse = NamedParameterUtils.substituteNamedParameters(parsedSql, paramSource);
 		Object[] params = NamedParameterUtils.buildValueArray(parsedSql, paramSource, getDeclaredParameters());
+		// 调用JdbcTemplate进行update
 		int rowsAffected = getJdbcTemplate().update(newPreparedStatementCreator(sqlToUse, params), generatedKeyHolder);
 		checkRowsAffected(rowsAffected);
 		return rowsAffected;
