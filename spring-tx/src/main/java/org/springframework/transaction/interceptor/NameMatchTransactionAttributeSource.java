@@ -34,6 +34,9 @@ import org.springframework.util.PatternMatchUtils;
  * Simple {@link TransactionAttributeSource} implementation that
  * allows attributes to be matched by registered name.
  *
+ * NameMatchTransactionAttributeSource作为TransactionAttributeSource的具体实现，
+ * 是实际完成事务处理属性的读入和匹配的地方
+ *
  * @author Juergen Hoeller
  * @since 21.08.2003
  * @see #isMatch
@@ -69,6 +72,10 @@ public class NameMatchTransactionAttributeSource implements TransactionAttribute
 	 * Parses the given properties into a name/attribute map.
 	 * Expects method names as keys and String attributes definitions as values,
 	 * parsable into TransactionAttribute instances via TransactionAttributeEditor.
+	 *
+	 *
+	 * 设置配置的事务方法
+	 *
 	 * @see #setNameMap
 	 * @see TransactionAttributeEditor
 	 */
@@ -99,6 +106,11 @@ public class NameMatchTransactionAttributeSource implements TransactionAttribute
 	}
 
 
+	/**
+	 * 对调用的方法进行判断，判断他是否是事务方法，如果是事务方法，那么取出响应的事务配置属性
+	 *
+	 * @Date 2020/4/7 10:14
+	 */
 	@Override
 	public TransactionAttribute getTransactionAttribute(Method method, Class<?> targetClass) {
 		if (!ClassUtils.isUserLevelMethod(method)) {
@@ -106,11 +118,13 @@ public class NameMatchTransactionAttributeSource implements TransactionAttribute
 		}
 
 		// Look for direct name match.
+		// 判断当前目标调用的方法与配置的事务方法是否直接匹配
 		String methodName = method.getName();
 		TransactionAttribute attr = this.nameMap.get(methodName);
 
 		if (attr == null) {
 			// Look for most specific name match.
+			// 如果不能直接匹配，通过PatternMatchUtils.simpleMatch方法进行匹配判断
 			String bestNameMatch = null;
 			for (String mappedName : this.nameMap.keySet()) {
 				if (isMatch(methodName, mappedName) &&

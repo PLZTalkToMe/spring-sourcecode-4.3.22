@@ -38,9 +38,20 @@ import org.springframework.aop.support.AbstractPointcutAdvisor;
 @SuppressWarnings("serial")
 public class TransactionAttributeSourceAdvisor extends AbstractPointcutAdvisor {
 
+	 /**
+	  * 与其他的Advisor一样，同样需要定义AOP中要用到Interceptor和Pointcut
+	  * Interceptor使用的是已经见过的拦截器：TransactionInterceptor
+	  */
 	private TransactionInterceptor transactionInterceptor;
 
+	/**
+	 * 对于pointcut，这里定义了一个内部类TransactionAttributeSourcePointcut
+	 */
 	private final TransactionAttributeSourcePointcut pointcut = new TransactionAttributeSourcePointcut() {
+		/**
+		 * 这里会通过调用TransactionAttributeSource来得到事务的配置属性，在对proxy的方法进行匹配调用时
+		 * 会使用到这些配置属性
+		 */
 		@Override
 		protected TransactionAttributeSource getTransactionAttributeSource() {
 			return (transactionInterceptor != null ? transactionInterceptor.getTransactionAttributeSource() : null);

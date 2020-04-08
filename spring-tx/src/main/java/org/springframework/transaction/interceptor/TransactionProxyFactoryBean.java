@@ -196,14 +196,18 @@ public class TransactionProxyFactoryBean extends AbstractSingletonProxyFactoryBe
 
     /**
      * Creates an advisor for this FactoryBean's TransactionInterceptor.
+     * 这里创建Spring AOP对事物处理的Advisor
      */
     @Override
     protected Object createMainInterceptor() {
         this.transactionInterceptor.afterPropertiesSet();
         if (this.pointcut != null) {
+            // 在里使用默认的通知器DefaultPointcutAdvisor，并为通知器配置事务处理拦截器
             return new DefaultPointcutAdvisor(this.pointcut, this.transactionInterceptor);
         } else {
             // Rely on default pointcut.
+            // 如果没有配置pointcut，使用TransactionAttributeSourceAdvisor作为通知器，并未
+            // 通知器设置TransactionInterceptor作为拦截器
             return new TransactionAttributeSourceAdvisor(this.transactionInterceptor);
         }
     }
